@@ -1,0 +1,1 @@
+{"features": ["temperature", "tds", "turbidity"], "bod": {"train_min": [4.0, 2.4448, 0.02], "train_max": [43.4, 48000.0, 19500.0], "edges": [5.45, 16.38]}, "cod": {"train_min": [4.0, 2.4448, 0.02], "train_max": [43.4, 48000.0, 19500.0], "edges": [33.73, 75.0]}}
