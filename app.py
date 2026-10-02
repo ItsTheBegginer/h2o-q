@@ -128,13 +128,7 @@ right.markdown(
     unsafe_allow_html=True,
 )
 
-st.markdown(
-    """<div class="note"><b>How to read this.</b> The marker is the best estimate and the bar is
-    the range the model expects the true value to fall in about 80% of the time. The model uses
-    only temperature, TDS and turbidity, so ranges are wide. Treat results as rough indications,
-    not laboratory measurements.</div>""",
-    unsafe_allow_html=True,
-)
+
 
 # ---- Optional: log readings with lab results ---------------------------------------
 st.markdown('<div class="section">📝 Log a reading</div>', unsafe_allow_html=True)
