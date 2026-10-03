@@ -20,30 +20,60 @@ st.set_page_config(page_title="AquaEstimate | BOD & COD", page_icon="💧", layo
 
 CSS = """
 <style>
-.stApp { background: linear-gradient(160deg, #eaf6ff 0%, #f4efff 55%, #fff0f6 100%); }
-.block-container { padding-top: 1.5rem; max-width: 820px; }
-.hero { background: linear-gradient(120deg, #0ea5e9 0%, #6366f1 55%, #d946ef 100%);
-        border-radius: 22px; padding: 28px 30px; color: #fff; margin-bottom: 22px;
-        box-shadow: 0 10px 30px rgba(99,102,241,.30); }
-.hero h1 { margin: 0; font-size: 2.1rem; color: #fff; }
-.hero p { margin: 6px 0 0 0; opacity: .92; font-size: 1.02rem; }
-.section { font-weight: 700; font-size: 1.15rem; color: #1e293b; margin: 18px 0 8px 0; }
-.card { background: #fff; border-radius: 20px; padding: 22px 22px 18px 22px;
-        box-shadow: 0 6px 20px rgba(15,23,42,.08); border-top: 6px solid var(--c1); }
-.card .tag { font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--c1); }
-.card .name { font-size: 1.05rem; color: #475569; margin-bottom: 4px; }
-.card .big { font-size: 3rem; font-weight: 800; line-height: 1.1; color: #0f172a; }
-.card .unit { font-size: 1rem; font-weight: 600; color: #64748b; margin-left: 6px; }
-.card .rng { margin: 10px 0 12px 0; color: #334155; font-size: .98rem; }
-.bar { position: relative; height: 12px; border-radius: 99px;
-       background: linear-gradient(90deg, var(--c1), var(--c2)); opacity: .9; }
-.dot { position: absolute; top: -5px; width: 22px; height: 22px; border-radius: 50%;
-       background: #fff; border: 4px solid #0f172a; transform: translateX(-50%); }
-.ends { display: flex; justify-content: space-between; font-size: .8rem; color: #64748b; margin-top: 8px; }
-.note { background: rgba(255,255,255,.75); border-left: 5px solid #6366f1; border-radius: 12px;
-        padding: 12px 16px; color: #334155; font-size: .93rem; margin-top: 18px; }
-.chip { display:inline-block; background:#fff; color:#4338ca; border-radius:99px; padding:3px 12px;
-        font-size:.8rem; font-weight:600; margin-right:6px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+/* ── Base ── */
+.stApp { background: #f8fafc; }
+.block-container { max-width: 820px; padding-top: 1.5rem; }
+
+/* ── Header ── */
+.app-header { padding: 1rem 0; border-bottom: 2px solid #2563eb; margin-bottom: 1.5rem; }
+.app-header h2 { font-size: 1.4rem; font-weight: 700; color: #0f172a; margin: 0; }
+.app-header p  { font-size: 0.85rem; color: #64748b; margin: 2px 0 0 0; }
+
+/* ── Section label ── */
+.section-label {
+    font-size: .7rem; font-weight: 700; letter-spacing: .1em;
+    color: #94a3b8; text-transform: uppercase; margin-bottom: 8px;
+}
+
+/* ── Result cards ── */
+.result-card {
+    background: #ffffff; border-radius: 16px; padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); border: 1px solid #e2e8f0;
+}
+.result-card .param-tag {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    letter-spacing: .08em; color: #2563eb; background: #eff6ff;
+    border-radius: 99px; padding: 2px 9px; margin-bottom: 6px;
+}
+.result-card .param-name { font-size: .95rem; color: #475569; margin-bottom: 6px; }
+.result-card .value { font-size: 2.8rem; font-weight: 800; color: #0f172a; line-height: 1.1; }
+.result-card .unit  { font-size: .9rem; color: #64748b; margin-left: 5px; }
+
+/* ── Range bar ── */
+.range-bar-track {
+    height: 6px; background: #e2e8f0; border-radius: 99px;
+    position: relative; margin: 12px 0 4px 0;
+}
+.range-bar-fill {
+    background: #2563eb; height: 100%; border-radius: 99px;
+}
+.range-dot {
+    width: 14px; height: 14px; background: #2563eb; border-radius: 50%;
+    position: absolute; top: -4px; transform: translateX(-50%);
+}
+.range-ends {
+    display: flex; justify-content: space-between;
+    font-size: .78rem; color: #94a3b8;
+}
+
+/* ── Inline warning ── */
+.inline-warn {
+    background: #fffbeb; border-left: 3px solid #f59e0b;
+    padding: 6px 10px; border-radius: 6px; font-size: .85rem;
+    color: #92400e; margin: 4px 0;
+}
+
+/* ── Number input labels ── */
 div[data-testid="stNumberInput"] label p { font-weight: 600; color: #1e293b; }
 </style>
 """
@@ -68,16 +98,42 @@ def predict(models, target, row):
     return lo, mid, hi
 
 
-def result_card(title, tag, lo, mid, hi, c1, c2):
+def classify(val, target):
+    if target == "bod":
+        if val < 2:   return "Excellent", "#16a34a"
+        if val < 6:   return "Good",      "#0d9488"
+        if val < 30:  return "Moderate",  "#d97706"
+        return "Poor", "#dc2626"
+    else:  # cod
+        if val < 40:  return "Clean",     "#16a34a"
+        if val < 100: return "Moderate",  "#d97706"
+        if val < 200: return "High",      "#ea580c"
+        return "Very High", "#dc2626"
+
+
+def result_card(title, tag, lo, mid, hi, target):
     pos = 50.0 if hi - lo < 1e-9 else float(np.clip((mid - lo) / (hi - lo) * 100, 3, 97))
+    label, badge_color = classify(mid, target)
+    badge = (
+        f'<span style="background:{badge_color}20; color:{badge_color}; '
+        f'border:1px solid {badge_color}40; border-radius:99px; '
+        f'padding:2px 10px; font-size:.8rem; font-weight:600;">{label}</span>'
+    )
     return f"""
-    <div class="card" style="--c1:{c1};--c2:{c2}">
-      <div class="tag">{tag}</div>
-      <div class="name">{title}</div>
-      <div><span class="big">{mid:.1f}</span><span class="unit">mg/L (estimate)</span></div>
-      <div class="rng">80% range: <b>{lo:.1f} to {hi:.1f}</b> mg/L</div>
-      <div class="bar"><div class="dot" style="left:{pos}%"></div></div>
-      <div class="ends"><span>{lo:.1f}</span><span>estimate</span><span>{hi:.1f}</span></div>
+    <div class="result-card">
+      <div class="param-tag">{tag}</div>
+      <div class="param-name">{title}</div>
+      <div>
+        <span class="value">{mid:.1f}</span><span class="unit">mg/L</span>
+      </div>
+      <div class="range-bar-track">
+        <div class="range-dot" style="left:{pos}%"></div>
+      </div>
+      <div class="range-ends">
+        <span>{lo:.1f}</span>
+        <span>{hi:.1f}</span>
+      </div>
+      <div style="margin-top:10px;">{badge}</div>
     </div>"""
 
 
@@ -90,54 +146,89 @@ except Exception as e:
 lo_bound = np.array(meta["bod"]["train_min"])
 hi_bound = np.array(meta["bod"]["train_max"])
 
-# ---- Header ---------------------------------------------------------------------
+# ── Header ────────────────────────────────────────────────────────────────────
 st.markdown(
-    """<div class="hero"><h1>💧 AquaEstimate</h1>
-    <p>Estimate BOD and COD from three quick sensor readings.</p></div>""",
+    """<div class="app-header">
+      <h2>💧 AquaEstimate</h2>
+      <p>Estimate BOD &amp; COD from three sensor readings</p>
+    </div>""",
     unsafe_allow_html=True,
 )
 
-# ---- Inputs ---------------------------------------------------------------------
-st.markdown('<div class="section">🧪 Sensor readings</div>', unsafe_allow_html=True)
+# ── Inputs ────────────────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Sensor readings</div>', unsafe_allow_html=True)
+
 c1, c2, c3 = st.columns(3)
 vals = {
-    "temperature": c1.number_input("🌡️ Temperature (°C)", min_value=0.0, value=22.0, step=0.1, format="%.2f"),
-    "tds": c2.number_input("🧂 TDS (ppm)", min_value=0.0, value=200.0, step=1.0, format="%.2f"),
-    "turbidity": c3.number_input("🌫️ Turbidity (NTU)", min_value=0.0, value=5.0, step=0.1, format="%.2f"),
+    "temperature": c1.number_input("Temperature (°C)", min_value=0.0, value=22.0, step=0.1, format="%.2f"),
+    "tds":         c2.number_input("TDS (ppm)",        min_value=0.0, value=200.0, step=1.0, format="%.2f"),
+    "turbidity":   c3.number_input("Turbidity (NTU)",  min_value=0.0, value=5.0,   step=0.1, format="%.2f"),
 }
+
+# Range hints below each column
+hint_labels = ["temperature", "tds", "turbidity"]
+hint_cols   = [c1, c2, c3]
+for col, feat, lo_b, hi_b in zip(hint_cols, hint_labels, lo_bound, hi_bound):
+    col.markdown(
+        f'<p style="font-size:.75rem; color:#94a3b8; margin-top:-8px;">'
+        f'Range: {lo_b:.1f} – {hi_b:.1f}</p>',
+        unsafe_allow_html=True,
+    )
+
 row = pd.DataFrame([[vals[f] for f in FEATS]], columns=FEATS)
 
+# ── Out-of-range + zero-value warnings ────────────────────────────────────────
 names = {"temperature": "Temperature", "tds": "TDS", "turbidity": "Turbidity"}
 for i, f in enumerate(FEATS):
     if vals[f] < lo_bound[i] or vals[f] > hi_bound[i]:
-        st.warning(
-            f"{names[f]} = {vals[f]} is outside the training range "
-            f"({lo_bound[i]:.1f} to {hi_bound[i]:.1f}). The estimate may be unreliable."
+        st.markdown(
+            f'<div class="inline-warn">'
+            f'<b>{names[f]}</b> = {vals[f]} is outside the training range '
+            f'({lo_bound[i]:.1f} – {hi_bound[i]:.1f}). The estimate may be unreliable.'
+            f'</div>',
+            unsafe_allow_html=True,
         )
 
-# ---- Results --------------------------------------------------------------------
-st.markdown('<div class="section">📊 Estimated results</div>', unsafe_allow_html=True)
+if vals["tds"] == 0:
+    st.markdown(
+        '<div class="inline-warn">TDS of 0 may indicate an invalid reading.</div>',
+        unsafe_allow_html=True,
+    )
+if vals["turbidity"] == 0:
+    st.markdown(
+        '<div class="inline-warn">Turbidity of 0 may indicate an invalid reading.</div>',
+        unsafe_allow_html=True,
+    )
+
+# ── Timestamp ─────────────────────────────────────────────────────────────────
+st.markdown(
+    f'<p style="font-size:.78rem; color:#94a3b8; margin: 8px 0 16px 0;">'
+    f'Last updated: {datetime.now().strftime("%H:%M:%S")}</p>',
+    unsafe_allow_html=True,
+)
+
+# ── Results ───────────────────────────────────────────────────────────────────
+st.markdown('<div class="section-label">Estimated results</div>', unsafe_allow_html=True)
 results = {t: predict(models, t, row) for t in ("bod", "cod")}
+
 left, right = st.columns(2)
 left.markdown(
-    result_card("Biochemical Oxygen Demand", "BOD", *results["bod"], "#0ea5e9", "#6366f1"),
+    result_card("Biochemical Oxygen Demand", "BOD", *results["bod"], "bod"),
     unsafe_allow_html=True,
 )
 right.markdown(
-    result_card("Chemical Oxygen Demand", "COD", *results["cod"], "#d946ef", "#f43f5e"),
+    result_card("Chemical Oxygen Demand", "COD", *results["cod"], "cod"),
     unsafe_allow_html=True,
 )
 
-
-
-# ---- Optional: log readings with lab results ---------------------------------------
-st.markdown('<div class="section">📝 Log a reading</div>', unsafe_allow_html=True)
+# ── Log readings ──────────────────────────────────────────────────────────────
+st.markdown('<div class="section-label" style="margin-top:1.8rem;">Log a reading</div>', unsafe_allow_html=True)
 with st.expander("Save this reading with lab results (for future retraining)"):
     a, b = st.columns(2)
     lab_bod = a.number_input("Lab BOD (mg/L)", min_value=0.0, value=0.0, step=0.1)
     lab_cod = b.number_input("Lab COD (mg/L)", min_value=0.0, value=0.0, step=0.1)
     note = st.text_input("Site / note")
-    if st.button("💾 Save reading", type="primary"):
+    if st.button("Save reading", type="primary"):
         rec = {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             **{f: vals[f] for f in FEATS},
@@ -149,6 +240,26 @@ with st.expander("Save this reading with lab results (for future retraining)"):
         }
         pd.DataFrame([rec]).to_csv(LOG_FILE, mode="a", header=not LOG_FILE.exists(), index=False)
         st.success(f"Saved to {LOG_FILE.name}")
+
     if LOG_FILE.exists():
-        st.download_button("⬇️ Download logged readings", LOG_FILE.read_bytes(), "paired_readings.csv")
-        st.caption("On hosted platforms this file may be wiped on restart. Download it regularly.")
+        df_log = pd.read_csv(LOG_FILE)
+        st.markdown('<div class="section-label">Last 5 readings</div>', unsafe_allow_html=True)
+        st.dataframe(df_log.tail(5), use_container_width=True)
+
+# Download button outside the expander, always visible when log exists
+if LOG_FILE.exists():
+    st.download_button(
+        "⬇️ Download logged readings",
+        LOG_FILE.read_bytes(),
+        "paired_readings.csv",
+    )
+    st.caption("On hosted platforms this file may be wiped on restart. Download it regularly.")
+
+# ── Footer ────────────────────────────────────────────────────────────────────
+st.markdown(
+    """<div style="text-align:center; color:#94a3b8; font-size:.8rem;
+                  margin-top:2rem; padding-top:1rem; border-top:1px solid #e2e8f0;">
+    Predictions are estimates based on ML models. Not a substitute for lab analysis.
+    </div>""",
+    unsafe_allow_html=True,
+)
